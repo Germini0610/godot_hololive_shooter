@@ -32,6 +32,10 @@ var drag_current_pos: Vector2
 var can_use_smash: bool = false
 var can_use_skill: bool = false
 
+## Smash 演出控制
+var is_smash_performing: bool = false  # Smash 演出進行中
+var dying_enemies: Array[Enemy] = []   # 正在播放死亡動畫的敵人列表
+
 ## 1-More 系統
 var one_more_available: bool = false
 
@@ -42,11 +46,34 @@ var weakness_hit_enemies: Array = []  # 記錄本回合已觸發弱點的敵人
 @export var debug_enabled: bool = true
 @export var show_physics_debug: bool = false
 
+## Demo 模式設定
+@export var enable_ina_skill_demo: bool = true  # 啟用 Ina 技能演示
+var skill_demo_controller: InaSkillDemo = null
+var player_control_enabled: bool = false  # 演示完成前禁用玩家控制
+
 ## 戰場設定
 const MIN_LAUNCH_POWER: float = 300.0
 const MAX_LAUNCH_POWER: float = 2500.0
 const POWER_SCALE: float = 2.5
 const MAX_POWER_THRESHOLD: float = 200.0  # 拖曳超過此距離就使用最大 power
+
+## Smash 演出設定（底層邏輯配置）
+const SMASH_PERFORMANCE_DURATION: float = 1.2  # Smash 演出總時長（波紋 + VFX + 緩衝）
+const SMASH_RIPPLE_DURATION: float = 1.0      # 波紋擴散時長
+const SMASH_BUFFER_TIME: float = 0.2          # 演出緩衝時間
+
+## 敵人死亡演出設定（底層邏輯配置）
+const ENEMY_FADEOUT_DURATION: float = 0.8    # 敵人淡出動畫時長
+const ENEMY_DEATH_DELAY: float = 0.9         # 敵人死亡總等待時長（必須 >= 淡出時長 + 小緩衝）
+
+func _init():
+	# 底層邏輯初始化
+	print("[BattleController] Initializing core logic...")
+	print("[BattleController] - Smash performance duration: ", SMASH_PERFORMANCE_DURATION, "s")
+	print("[BattleController] - Ripple duration: ", SMASH_RIPPLE_DURATION, "s")
+	print("[BattleController] - Buffer time: ", SMASH_BUFFER_TIME, "s")
+	print("[BattleController] - Enemy death delay: ", ENEMY_DEATH_DELAY, "s")
+	print("[BattleController] - Enemy fadeout duration: ", ENEMY_FADEOUT_DURATION, "s")
 
 func _ready():
 	add_to_group("battle_controller")
@@ -73,6 +100,10 @@ func _ready():
 	# 設置初始活躍單位
 	call_deferred("_initialize_active_unit")
 
+	# 初始化技能演示控制器
+	if enable_ina_skill_demo:
+		call_deferred("_initialize_skill_demo")
+
 	print("[BattleController] Initialized")
 
 ## 連接敵人信號
@@ -89,6 +120,42 @@ func _initialize_active_unit():
 		current_active_unit = player_units[0]
 		print("[BattleController] Initial active unit: ", current_active_unit.unit_name)
 
+## 初始化技能演示
+func _initialize_skill_demo():
+	# 檢查是否有 Ina 單位
+	var player_units = get_tree().get_nodes_in_group("player")
+	var ina_unit: InaUnit = null
+
+	for unit in player_units:
+		if unit is InaUnit:
+			ina_unit = unit
+			break
+
+	if not ina_unit:
+		print("[BattleController] No Ina unit found, skipping demo")
+		player_control_enabled = true
+		return
+
+	# 創建演示控制器
+	skill_demo_controller = InaSkillDemo.new()
+	add_child(skill_demo_controller)
+
+	# 連接信號
+	skill_demo_controller.all_demos_finished.connect(_on_skill_demo_finished)
+
+	# 獲取敵人列表
+	var enemies = get_tree().get_nodes_in_group("enemy")
+
+	# 開始演示序列
+	print("[BattleController] Starting Ina skill demonstration...")
+	player_control_enabled = false  # 禁用玩家控制
+	skill_demo_controller.start_demo_sequence(ina_unit, enemies, self)
+
+## 演示完成回調
+func _on_skill_demo_finished():
+	print("[BattleController] Skill demo finished, enabling player control")
+	player_control_enabled = true
+
 func _process(delta):
 	if is_player_turn:
 		_handle_input()
@@ -99,6 +166,10 @@ func _process(delta):
 
 ## 處理輸入
 func _handle_input():
+	# 如果演示模式啟用且玩家控制未啟用，忽略輸入
+	if enable_ina_skill_demo and not player_control_enabled:
+		return
+
 	# 開始拖曳
 	if Input.is_action_just_pressed("ui_click") and not is_dragging and current_active_unit:
 		if not current_active_unit.is_moving:
@@ -179,11 +250,14 @@ func _launch_unit():
 
 ## 等待移動結束
 func _wait_for_movement_end():
-	while current_active_unit and current_active_unit.is_moving:
+	while current_active_unit and (current_active_unit.is_moving or is_smash_performing):
 		await get_tree().create_timer(0.1).timeout
 
-	# 移動結束
-	_on_movement_ended()
+	# 如果 Smash 正在演出，不要在這裡調用 _on_movement_ended()
+	# 因為 Smash 會自己調用
+	if not is_smash_performing:
+		# 移動結束
+		_on_movement_ended()
 
 ## 移動結束處理
 func _on_movement_ended():
@@ -197,38 +271,134 @@ func _on_movement_ended():
 		print("[BattleController] 1-More! Extra move granted.")
 		one_more_available = false
 
-## 觸發 Smash
+## ========== 底層邏輯：Smash 演出控制 ==========
+## 執行 Smash 演出流程（可被重複調用的底層方法）
+##
+## 這是核心的演出控制邏輯，確保以下流程順序：
+## 1. 玩家發射 → 移動中 → 點擊觸發 Smash
+## 2. 立即停止移動 + 設置演出標志
+## 3. 波紋擴散 + 擊中敵人 + VFX 播放
+## 4. 【暫停演出時間】← 提升打擊感的關鍵！
+## 5. 清除演出標志 → 敵人開始行動
+##
+## 使用方式：
+##   _perform_smash_sequence(position, damage, attribute)
+##
+## 配置常量：
+##   SMASH_PERFORMANCE_DURATION - 總演出時長
+##   SMASH_RIPPLE_DURATION - 波紋時長
+##   SMASH_BUFFER_TIME - 緩衝時間
+func _perform_smash_sequence(smash_position: Vector2, damage: float, attribute: Attribute.Type) -> void:
+	print("[BattleController] ========== Smash Performance Sequence Started ==========")
+
+	# 步驟 1：設置演出標志，阻止流程繼續
+	is_smash_performing = true
+	print("[BattleController] Step 1: Performance flag set - flow paused")
+
+	# 步驟 2：停止玩家移動
+	if current_active_unit:
+		current_active_unit.linear_velocity = Vector2.ZERO
+		current_active_unit.angular_velocity = 0.0
+		current_active_unit.stop_movement()
+		print("[BattleController] Step 2: Player stopped at ", smash_position)
+
+	# 步驟 3：觸發角色特效（如 Ina 翻牌）
+	if current_active_unit is InaUnit:
+		print("[BattleController] Step 3: Triggering character effect (Ina flip card)")
+		current_active_unit.on_flip_card(smash_position)
+
+	# 步驟 4：生成波紋特效
+	print("[BattleController] Step 4: Creating ripple effect...")
+	_spawn_smash_ripple(smash_position, damage, attribute)
+
+	# 步驟 5：等待演出完成（波紋 + VFX + 緩衝時間）
+	print("[BattleController] Step 5: Waiting for performance (", SMASH_PERFORMANCE_DURATION, "s)...")
+	await get_tree().create_timer(SMASH_PERFORMANCE_DURATION).timeout
+
+	# 步驟 6：等待所有正在死亡的敵人完成動畫
+	if not dying_enemies.is_empty():
+		print("[BattleController] Step 6: Waiting for ", dying_enemies.size(), " dying enemies to finish death animations...")
+		await _wait_for_all_death_animations()
+		print("[BattleController] All death animations completed!")
+	else:
+		print("[BattleController] Step 6: No dying enemies, continuing...")
+
+	# 步驟 7：清除演出標志，恢復流程
+	is_smash_performing = false
+	print("[BattleController] Step 7: Performance complete - flow resumed")
+	print("[BattleController] ========== Smash Performance Sequence Ended ==========")
+
+	# 步驟 8：調用移動結束處理
+	_on_movement_ended()
+
+## 等待所有死亡動畫完成（底層方法）
+func _wait_for_all_death_animations() -> void:
+	var max_wait_time = 2.0  # 最多等待 2 秒
+	var wait_elapsed = 0.0
+	var check_interval = 0.1
+
+	while wait_elapsed < max_wait_time:
+		# 清理已經無效的敵人引用
+		dying_enemies = dying_enemies.filter(func(e): return is_instance_valid(e) and e.is_inside_tree())
+
+		# 如果所有死亡動畫都完成了
+		if dying_enemies.is_empty():
+			print("[BattleController] All dying enemies cleared")
+			return
+
+		print("[BattleController] Still waiting for ", dying_enemies.size(), " enemies to finish death animations...")
+		await get_tree().create_timer(check_interval).timeout
+		wait_elapsed += check_interval
+
+	print("[BattleController] WARNING: Death animation wait timeout, forcing continue")
+	dying_enemies.clear()
+
+## 生成 Smash 波紋（底層方法）
+func _spawn_smash_ripple(position: Vector2, damage: float, attribute: Attribute.Type) -> void:
+	var ripple_scene = preload("res://scenes/SmashRipple.tscn")
+	if not ripple_scene:
+		print("[BattleController] ERROR: Failed to load ripple scene")
+		return
+
+	var ripple = ripple_scene.instantiate()
+	if not ripple:
+		print("[BattleController] ERROR: Failed to instantiate ripple")
+		return
+
+	ripple.global_position = position
+	ripple.z_index = 100
+
+	if ripple.has_method("setup"):
+		ripple.setup(damage, attribute)
+
+	# 添加到戰場
+	var battlefield = get_parent()
+	if battlefield:
+		battlefield.add_child(ripple)
+		print("[BattleController] Ripple spawned at ", position, " with damage ", damage)
+	else:
+		add_child(ripple)
+		print("[BattleController] WARNING: Battlefield not found, added to BattleController")
+
+## 觸發 Smash（上層調用接口）
 func _trigger_smash():
 	if not current_active_unit or not current_active_unit.is_moving:
 		return
 
 	print("[BattleController] SMASH triggered!")
 
-	# Stop the player's movement
-	var smash_position = current_active_unit.global_position
-	current_active_unit.stop_movement()
-
-	# Instantiate the ripple effect
-	var ripple_scene = preload("res://scenes/SmashRipple.tscn")
-	if ripple_scene:
-		var ripple = ripple_scene.instantiate() as SmashRipple
-		if ripple:
-			ripple.global_position = smash_position
-			
-			# Configure the ripple via setup function
-			var smash_multiplier = 1.5
-			var damage = current_active_unit.atk * smash_multiplier
-			var attribute = current_active_unit.attribute
-			ripple.setup(damage, attribute)
-			
-			# Add to the scene and set a high Z-index to ensure visibility
-			ripple.z_index = 100
-			add_child(ripple)
-			print("[BattleController] Smash ripple instance created at: ", ripple.global_position)
-
-	# Smash has been used
+	# 禁用 Smash 按鈕
 	can_use_smash = false
 	smash_ready.emit(false)
+
+	# 計算傷害
+	var smash_position = current_active_unit.global_position
+	var smash_multiplier = 1.5
+	var damage = current_active_unit.atk * smash_multiplier
+	var attribute = current_active_unit.attribute
+
+	# 調用底層演出方法
+	_perform_smash_sequence(smash_position, damage, attribute)
 
 ## 觸發技能
 func _trigger_skill():
@@ -398,17 +568,129 @@ func _get_nearby_enemies(pos: Vector2, radius: float) -> Array:
 			nearby.append(enemy)
 	return nearby
 
-## 敵人死亡處理
+## ========== 底層邏輯：敵人死亡處理 ==========
+## 敵人死亡處理（徹底優化版本）
+## 問題修復：
+## 1. 防止重複調用 queue_free
+## 2. 安全的實例檢查
+## 3. 死亡演出效果
+## 4. 正確的 1-More 觸發時機
 func _on_enemy_died(enemy: Enemy):
+	# 第一重保護：檢查敵人是否有效
+	if not is_instance_valid(enemy):
+		print("[BattleController] WARNING: Invalid enemy in _on_enemy_died")
+		return
+
+	# 第二重保護：檢查是否在場景樹中
+	if not enemy.is_inside_tree():
+		print("[BattleController] WARNING: Enemy not in tree in _on_enemy_died")
+		return
+
+	# 第三重保護：防止重複處理（使用元數據標記）
+	if enemy.has_meta("_death_processed"):
+		print("[BattleController] Enemy ", enemy.unit_name, " death already processed, skipping")
+		return
+
+	enemy.set_meta("_death_processed", true)
+	print("[BattleController] ========== Enemy Death Sequence Started ==========")
 	print("[BattleController] Enemy died: ", enemy.unit_name)
+
+	# 添加到正在死亡的敵人列表（用於 Smash 演出等待）
+	if not dying_enemies.has(enemy):
+		dying_enemies.append(enemy)
+		print("[BattleController] Added to dying_enemies list (total: ", dying_enemies.size(), ")")
+
+	# 立即觸發 1-More（在演出開始時就授予，不等待）
 	one_more_available = true
+	print("[BattleController] 1-More granted!")
 
-	# 延遲刪除敵人
-	await get_tree().create_timer(0.5).timeout
-	enemy.queue_free()
+	# 停止敵人的所有行動和物理
+	if enemy.has_method("stop_movement"):
+		enemy.stop_movement()
+	enemy.linear_velocity = Vector2.ZERO
+	enemy.angular_velocity = 0.0
 
-	# 檢查戰鬥結束
+	# 播放死亡演出（淡出效果）並等待完成
+	print("[BattleController] Playing death animation...")
+	var death_tween = _play_enemy_death_effect(enemy)
+
+	# 等待 Tween 動畫完成
+	if death_tween:
+		print("[BattleController] Waiting for death animation tween to finish...")
+		await death_tween.finished
+		print("[BattleController] Death animation tween completed!")
+	else:
+		# 如果 Tween 創建失敗，使用固定延遲作為後備
+		print("[BattleController] WARNING: Tween not created, using fallback delay...")
+		await get_tree().create_timer(ENEMY_DEATH_DELAY).timeout
+
+	# 再次檢查敵人是否仍然有效（可能在等待期間被其他邏輯刪除）
+	if not is_instance_valid(enemy):
+		print("[BattleController] Enemy already removed during death animation")
+		_check_battle_end()
+		return
+
+	if not enemy.is_inside_tree():
+		print("[BattleController] Enemy already removed from tree")
+		_check_battle_end()
+		return
+
+	# 從正在死亡列表中移除
+	if dying_enemies.has(enemy):
+		dying_enemies.erase(enemy)
+		print("[BattleController] Removed from dying_enemies list (remaining: ", dying_enemies.size(), ")")
+
+	# 安全刪除敵人
+	print("[BattleController] Safely removing enemy...")
+	call_deferred("_safe_remove_enemy", enemy)
+
+	# 檢查戰鬥結束（使用延遲確保敵人已被移除）
+	await get_tree().process_frame
 	_check_battle_end()
+
+	print("[BattleController] ========== Enemy Death Sequence Ended ==========")
+
+## 播放敵人死亡特效（返回 Tween 以便等待完成）
+func _play_enemy_death_effect(enemy: Enemy) -> Tween:
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return null
+
+	# 創建淡出動畫
+	var tween = create_tween()
+	tween.set_parallel(true)
+
+	# 淡出
+	tween.tween_property(enemy, "modulate:a", 0.0, ENEMY_FADEOUT_DURATION)
+
+	# 縮小效果
+	tween.tween_property(enemy, "scale", Vector2(0.5, 0.5), ENEMY_FADEOUT_DURATION)
+
+	# 可選：輕微旋轉（RigidBody2D 一定有 rotation 屬性）
+	tween.tween_property(enemy, "rotation", enemy.rotation + PI * 2, ENEMY_FADEOUT_DURATION)
+
+	# 返回 Tween 對象以便調用者等待完成
+	return tween
+
+## 安全移除敵人（底層方法）
+func _safe_remove_enemy(enemy: Enemy) -> void:
+	# 最終檢查
+	if not is_instance_valid(enemy):
+		print("[BattleController] Cannot remove enemy: already invalid")
+		return
+
+	if not enemy.is_inside_tree():
+		print("[BattleController] Cannot remove enemy: not in tree")
+		return
+
+	# 斷開所有信號連接（防止死亡後還觸發信號）
+	if enemy.has_signal("died"):
+		# 嘗試斷開，即使已經斷開也不會報錯
+		if enemy.died.is_connected(_on_enemy_died):
+			enemy.died.disconnect(_on_enemy_died)
+
+	# 執行刪除
+	print("[BattleController] Executing queue_free on ", enemy.unit_name)
+	enemy.queue_free()
 
 ## 繪製拖曳軌跡
 func _draw():
@@ -474,3 +756,13 @@ func check_and_record_weakness_hit(enemy) -> bool:
 	weakness_hit_enemies.append(enemy)
 	print("[BattleController] Weakness triggered for ", enemy.unit_name, " - RECORDED")
 	return true
+
+## 啟用玩家控制（由演示控制器調用）
+func enable_player_control():
+	player_control_enabled = true
+	print("[BattleController] Player control enabled")
+
+## 跳過技能演示
+func skip_skill_demo():
+	if skill_demo_controller and skill_demo_controller.is_demo_active():
+		skill_demo_controller.skip_demo()

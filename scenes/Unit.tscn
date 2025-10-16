@@ -1,6 +1,6 @@
 [gd_scene load_steps=5 format=3 uid="uid://b6qvx3wxqqwww"]
 
-[ext_resource type="Script" path="res://scripts/Unit.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/InaUnit.gd" id="1"]
 [ext_resource type="Texture2D" uid="uid://cdmvg5w5l3gq2" path="res://material/user.png" id="2"]
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_unit"]

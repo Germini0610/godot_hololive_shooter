@@ -190,7 +190,7 @@ func _setup_team_display():
 			# 血量文字
 			var hp_label = Label.new()
 			hp_label.text = "1000/1000"
-			hp_label.add_theme_font_size_override("font_size", 16)
+			hp_label.add_theme_font_size_override("font_size", 24)  # 从 16 增大到 24
 			hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			hp_label.name = "LeaderHPLabel"
 			vbox.add_child(hp_label)
