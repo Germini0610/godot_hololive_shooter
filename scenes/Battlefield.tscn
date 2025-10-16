@@ -1,0 +1,136 @@
+[gd_scene load_steps=7 format=3 uid="uid://f0uza7b1uuaaa"]
+
+[ext_resource type="Script" path="res://scripts/BattleController.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://b6qvx3wxqqwww" path="res://scenes/Unit.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://c7rwx4yxrrxxx" path="res://scenes/Enemy.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://e9tyz6a0ttzzz" path="res://scenes/BattleUI.tscn" id="4"]
+[ext_resource type="Texture2D" uid="uid://ck9vx8wzyyaab" path="res://material/background.png" id="5"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_wall"]
+friction = 0.0
+bounce = 1.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(1700, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2"]
+size = Vector2(80, 690)
+
+[node name="Battlefield" type="Node2D"]
+
+[node name="Background" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="BackgroundTexture" type="TextureRect" parent="Background"]
+modulate = Color(1, 1, 1, 0.3)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BattleController" type="Node2D" parent="."]
+script = ExtResource("1")
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="TopWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(816, 85)
+collision_layer = 4
+collision_mask = 0
+physics_material_override = SubResource("PhysicsMaterial_wall")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopWall"]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="BottomWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(816, 775)
+collision_layer = 4
+collision_mask = 0
+physics_material_override = SubResource("PhysicsMaterial_wall")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomWall"]
+shape = SubResource("RectangleShape2D_1")
+
+[node name="LeftWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(0, 430)
+collision_layer = 4
+collision_mask = 0
+physics_material_override = SubResource("PhysicsMaterial_wall")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/LeftWall"]
+shape = SubResource("RectangleShape2D_2")
+
+[node name="RightWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(1632, 430)
+collision_layer = 4
+collision_mask = 0
+physics_material_override = SubResource("PhysicsMaterial_wall")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/RightWall"]
+shape = SubResource("RectangleShape2D_2")
+
+[node name="Units" type="Node2D" parent="."]
+
+[node name="PlayerUnit" parent="Units" instance=ExtResource("2")]
+position = Vector2(255, 430)
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Enemy1" parent="Enemies" instance=ExtResource("3")]
+position = Vector2(1020, 255)
+unit_name = "Blue Slime"
+attribute = 1
+max_hp = 800
+atk = 80
+action_count_max = 3
+action_type = 0
+
+[node name="Enemy2" parent="Enemies" instance=ExtResource("3")]
+position = Vector2(1275, 255)
+unit_name = "Green Goblin"
+attribute = 2
+max_hp = 1000
+atk = 100
+action_count_max = 4
+action_type = 1
+
+[node name="Enemy3" parent="Enemies" instance=ExtResource("3")]
+position = Vector2(1020, 605)
+unit_name = "Red Dragon"
+attribute = 0
+max_hp = 1200
+atk = 120
+action_count_max = 2
+action_type = 0
+
+[node name="Enemy4" parent="Enemies" instance=ExtResource("3")]
+position = Vector2(1275, 605)
+unit_name = "Black Shadow"
+attribute = 3
+max_hp = 900
+atk = 110
+action_count_max = 3
+action_type = 2
+
+[node name="Enemy5" parent="Enemies" instance=ExtResource("3")]
+position = Vector2(1403, 430)
+unit_name = "Gold Knight"
+attribute = 5
+max_hp = 1500
+atk = 90
+action_count_max = 5
+action_type = 3
+
+[node name="Traps" type="Node2D" parent="."]
+
+[node name="BattleUI" parent="." instance=ExtResource("4")]
+
+[connection signal="ready" from="BattleController" to="BattleController" method="_on_ready"]

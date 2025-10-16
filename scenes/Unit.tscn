@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3 uid="uid://b6qvx3wxqqwww"]
+
+[ext_resource type="Script" path="res://scripts/Unit.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://cdmvg5w5l3gq2" path="res://material/user.png" id="2"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_unit"]
+friction = 0.0
+bounce = 1.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 100.0
+
+[node name="Unit" type="RigidBody2D" groups=["player"]]
+gravity_scale = 0.0
+linear_damp = 2.0
+physics_material_override = SubResource("PhysicsMaterial_unit")
+script = ExtResource("1")
+unit_name = "Player Unit"
+attribute = 0
+max_hp = 1000
+atk = 100
+is_player_unit = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture = ExtResource("2")
+scale = Vector2(0.3, 0.3)
