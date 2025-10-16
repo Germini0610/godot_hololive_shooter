@@ -259,3 +259,8 @@ battle_controller.toggle_physics_debug()
 ## 授權
 
 此專案為教學範例，可自由使用與修改。
+
+
+通过网盘分享的文件：4096_Dark VFX 01 - 12.rar
+链接: https://pan.baidu.com/s/1NdngDQWzkrHFc3q8JSyZ5g?pwd=4096 提取码: 4096 
+--来自百度网盘超级会员v6的分享

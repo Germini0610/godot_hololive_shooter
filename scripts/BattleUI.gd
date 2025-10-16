@@ -160,13 +160,13 @@ func _setup_team_display():
 		if i == 0:
 			# Leader 使用 user.png，並添加點擊功能
 			var button = Button.new()
-			button.custom_minimum_size = Vector2(100, 100)
+			button.custom_minimum_size = Vector2(120, 120)  # 適中大小 120x120
 			button.flat = true
 			button.name = "LeaderButton"
 
 			# 創建圖片作為按鈕背景
 			var texture_rect = TextureRect.new()
-			texture_rect.custom_minimum_size = Vector2(100, 100)
+			texture_rect.custom_minimum_size = Vector2(120, 120)  # 適中大小 120x120
 			var user_texture = load("res://material/user.png")
 			texture_rect.texture = user_texture
 			texture_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
@@ -179,7 +179,7 @@ func _setup_team_display():
 
 			# 添加血條
 			var hp_bar = ProgressBar.new()
-			hp_bar.custom_minimum_size = Vector2(90, 12)
+			hp_bar.custom_minimum_size = Vector2(110, 14)  # 適中大小
 			hp_bar.max_value = 100.0
 			hp_bar.value = 100.0
 			hp_bar.show_percentage = false
@@ -190,26 +190,26 @@ func _setup_team_display():
 			# 血量文字
 			var hp_label = Label.new()
 			hp_label.text = "1000/1000"
-			hp_label.add_theme_font_size_override("font_size", 24)  # 从 16 增大到 24
+			hp_label.add_theme_font_size_override("font_size", 20)  # 適中字體大小
 			hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			hp_label.name = "LeaderHPLabel"
 			vbox.add_child(hp_label)
 		else:
 			# 其他位置用灰色方塊
 			var circle = ColorRect.new()
-			circle.custom_minimum_size = Vector2(100, 100)
+			circle.custom_minimum_size = Vector2(120, 120)  # 適中大小 120x120
 			circle.color = Color(0.5, 0.5, 0.5, 1.0)
 			vbox.add_child(circle)
 
 			# 空白佔位（保持對齊）
 			var spacer = Control.new()
-			spacer.custom_minimum_size = Vector2(90, 28)
+			spacer.custom_minimum_size = Vector2(110, 34)  # 適中大小
 			vbox.add_child(spacer)
 
 		# 單位名稱
 		var label = Label.new()
 		label.text = positions[i]
-		label.add_theme_font_size_override("font_size", 20)
+		label.add_theme_font_size_override("font_size", 18)  # 適中字體大小
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vbox.add_child(label)
 

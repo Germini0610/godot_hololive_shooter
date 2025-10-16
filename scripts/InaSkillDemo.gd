@@ -22,10 +22,10 @@ var demo_enemies: Array = []
 var battle_controller = null
 
 ## 演示配置
-const DEMO_DELAY_BEFORE_START: float = 1.0  # 進入戰鬥後延遲
-const DEMO_DELAY_BETWEEN_SKILLS: float = 2.0  # 技能之間延遲
-const LEADER_SKILL_DEMO_DURATION: float = 3.0  # 隊長技能演示時長
-const PASSIVE_SKILL_DEMO_DURATION: float = 3.0  # 被動技能演示時長
+const DEMO_DELAY_BEFORE_START: float = 0.5  # 進入戰鬥後延遲（優化：1.0s -> 0.5s）
+const DEMO_DELAY_BETWEEN_SKILLS: float = 0.5  # 技能之間延遲（優化：2.0s -> 0.5s）
+const LEADER_SKILL_DEMO_DURATION: float = 1.5  # 隊長技能演示時長（優化：3.0s -> 1.5s）
+const PASSIVE_SKILL_DEMO_DURATION: float = 1.5  # 被動技能演示時長（優化：3.0s -> 1.5s）
 
 func _ready():
 	print("[InaSkillDemo] Demo controller ready")
@@ -65,7 +65,7 @@ func _start_leader_skill_demo():
 	ina_unit.apply_leader_skill(team_members)
 
 	# 2. 演示效果（播放 VFX 2）
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(0.5).timeout
 	print("[InaSkillDemo] Demonstrating leader skill VFX (VFX 2)...")
 	ina_unit.leader_skill_turn_penalty(team_members)
 
@@ -96,7 +96,7 @@ func _start_passive_skill_demo():
 	print("[InaSkillDemo]   - ATK x10 (", ina_unit.atk, " -> ", ina_unit.atk * 10, ")")
 	print("[InaSkillDemo]   - Flip card (Smash) drains enemy HP")
 
-	await get_tree().create_timer(1.5).timeout
+	await get_tree().create_timer(0.5).timeout
 
 	# 2. 演示翻牌吸血效果（播放 VFX 10）
 	print("[InaSkillDemo] *** Demonstrating Flip Card VFX (VFX 10) ***")
@@ -111,7 +111,7 @@ func _start_passive_skill_demo():
 	print("[InaSkillDemo] Note: Madness passive remains active during gameplay")
 
 	# 等待動畫播放
-	await get_tree().create_timer(2.0).timeout
+	await get_tree().create_timer(1.0).timeout
 
 	# 3. 等待演示完成
 	await get_tree().create_timer(PASSIVE_SKILL_DEMO_DURATION).timeout
@@ -123,7 +123,7 @@ func _finish_passive_demo():
 	passive_skill_demo_finished.emit()
 
 	# 延遲後進入玩家控制
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(0.3).timeout
 	_finish_all_demos()
 
 ## 完成所有演示，進入玩家控制

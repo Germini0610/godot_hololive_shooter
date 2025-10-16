@@ -288,24 +288,33 @@ func _on_movement_ended():
 ##   SMASH_PERFORMANCE_DURATION - 總演出時長
 ##   SMASH_RIPPLE_DURATION - 波紋時長
 ##   SMASH_BUFFER_TIME - 緩衝時間
-func _perform_smash_sequence(smash_position: Vector2, damage: float, attribute: Attribute.Type) -> void:
+func _perform_smash_sequence(smash_position: Vector2, damage: float, attribute: Attribute.Type, is_ina: bool = false, ina_flip_range: float = 0.0) -> void:
 	print("[BattleController] ========== Smash Performance Sequence Started ==========")
 
 	# 步驟 1：設置演出標志，阻止流程繼續
 	is_smash_performing = true
 	print("[BattleController] Step 1: Performance flag set - flow paused")
 
-	# 步驟 2：停止玩家移動
-	if current_active_unit:
+	# 步驟 2：停止玩家移動（如果單位仍然有效）
+	if current_active_unit and is_instance_valid(current_active_unit) and current_active_unit.is_inside_tree():
 		current_active_unit.linear_velocity = Vector2.ZERO
 		current_active_unit.angular_velocity = 0.0
 		current_active_unit.stop_movement()
 		print("[BattleController] Step 2: Player stopped at ", smash_position)
+	else:
+		print("[BattleController] Step 2: Player unit invalid/disappeared, but continuing with Smash effects")
 
 	# 步驟 3：觸發角色特效（如 Ina 翻牌）
-	if current_active_unit is InaUnit:
-		print("[BattleController] Step 3: Triggering character effect (Ina flip card)")
-		current_active_unit.on_flip_card(smash_position)
+	# !! 修正：即使單位消失，也要播放特效 !!
+	if is_ina:
+		print("[BattleController] Step 3: Triggering Ina flip card effect")
+		# 嘗試調用單位方法（如果單位還在）
+		if current_active_unit and is_instance_valid(current_active_unit) and current_active_unit.is_inside_tree():
+			current_active_unit.on_flip_card(smash_position)
+		else:
+			# 單位已消失，直接播放特效和執行吸血邏輯
+			print("[BattleController] Unit disappeared, manually triggering flip card effects")
+			_manual_ina_flip_card(smash_position, ina_flip_range)
 
 	# 步驟 4：生成波紋特效
 	print("[BattleController] Step 4: Creating ripple effect...")
@@ -391,14 +400,17 @@ func _trigger_smash():
 	can_use_smash = false
 	smash_ready.emit(false)
 
-	# 計算傷害
+	# !! 重要：立即保存單位數據，防止單位在碰撞中消失導致數據丟失 !!
 	var smash_position = current_active_unit.global_position
 	var smash_multiplier = 1.5
 	var damage = current_active_unit.atk * smash_multiplier
 	var attribute = current_active_unit.attribute
+	var unit_type = current_active_unit.get_script()  # 保存單位類型以判斷是否為 InaUnit
+	var is_ina = current_active_unit is InaUnit
+	var ina_flip_range = current_active_unit.flip_range if is_ina else 0
 
-	# 調用底層演出方法
-	_perform_smash_sequence(smash_position, damage, attribute)
+	# 調用底層演出方法（傳遞保存的數據）
+	_perform_smash_sequence(smash_position, damage, attribute, is_ina, ina_flip_range)
 
 ## 觸發技能
 func _trigger_skill():
@@ -766,3 +778,37 @@ func enable_player_control():
 func skip_skill_demo():
 	if skill_demo_controller and skill_demo_controller.is_demo_active():
 		skill_demo_controller.skip_demo()
+
+## 手動觸發 Ina 翻牌效果（當單位已消失時使用）
+func _manual_ina_flip_card(flip_position: Vector2, flip_range: float):
+	"""當 Ina 單位消失後，手動觸發翻牌特效和吸血邏輯"""
+	print("[BattleController] Manual Ina flip card triggered at ", flip_position)
+
+	# 1. 播放 VFX 10（癲狂吸血特效）
+	InaVFX.spawn_madness_drain_vfx(flip_position, get_tree().root)
+
+	# 2. 獲取附近敵人並執行吸血
+	const PASSIVE_SKILL_HP_DRAIN_PERCENT: float = 0.20  # 吸收敵人20%血量
+	var nearby_enemies = _get_nearby_enemies(flip_position, flip_range)
+	print("[BattleController] Found ", nearby_enemies.size(), " nearby enemies for flip card")
+
+	var total_absorbed: int = 0
+
+	for enemy in nearby_enemies:
+		if enemy and is_instance_valid(enemy) and enemy.current_hp > 0:
+			# 吸收敵人20%血量
+			var drain_amount = int(enemy.current_hp * PASSIVE_SKILL_HP_DRAIN_PERCENT)
+			drain_amount = max(1, drain_amount)
+
+			enemy.take_damage(drain_amount, false)
+			total_absorbed += drain_amount
+
+			# 顯示傷害浮字
+			var damage_label = preload("res://scripts/DamageLabel.gd").new()
+			damage_label.global_position = enemy.global_position
+			get_tree().root.add_child(damage_label)
+			damage_label.setup(drain_amount, false, false)
+
+			print("  Drained ", drain_amount, " HP from ", enemy.unit_name)
+
+	print("[BattleController] Manual flip card complete. Total HP absorbed: ", total_absorbed)
