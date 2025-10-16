@@ -15,11 +15,21 @@ gravity_scale = 0.0
 linear_damp = 2.0
 physics_material_override = SubResource("PhysicsMaterial_unit")
 script = ExtResource("1")
-unit_name = "Player Unit"
+unit_name = "Ina"
 attribute = 0
-max_hp = 1000
-atk = 100
+max_hp = 20913
+atk = 200
 is_player_unit = true
+move_stat = 50
+flip_range = 200
+command_skill_name = "深淵之握"
+command_skill_description = "發動後，自身進入獻祭狀態持續三回合,每回合自身損失15％血量,敵方移動時,召喚觸手綁定敵人並強制停止移動，造成4000%傷害"
+leader_skill_name = "古神的咒福"
+leader_skill_description = "所有队员三圍增加三倍,每回合損失現有血量10%!"
+passive_skill_name = "癲狂"
+passive_skill_description = "射出方向改為反向，攻擊力增加1000%! 翻牌時，吸收附近敵人血量20%，自身恢復該血量。"
+awaken_skill_name = "古神降臨"
+awaken_skill_description = "自身三圍變為兩倍，每回合恢復現有血量15%"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_1")

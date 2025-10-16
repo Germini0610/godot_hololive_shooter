@@ -13,9 +13,26 @@ signal damaged(damage: int, is_weakness: bool)
 @export var atk: int = 100
 @export var is_player_unit: bool = true
 
+## 卡片詳細資訊
+@export var move_stat: int = 50  # 移動
+@export var flip_range: int = 200  # 翻牌範圍
+
 ## 技能相關
 @export var command_skill_cost: int = 3  # 0~5
 @export var command_skill_name: String = "Command Skill"
+@export var command_skill_description: String = "Command skill description"
+
+## 隊長技能
+@export var leader_skill_name: String = "Leader Skill"
+@export var leader_skill_description: String = "Leader skill description"
+
+## 被動技能
+@export var passive_skill_name: String = "Passive Skill"
+@export var passive_skill_description: String = "Passive skill description"
+
+## 覺醒技能
+@export var awaken_skill_name: String = "Awaken Skill"
+@export var awaken_skill_description: String = "Awaken skill description"
 
 ## Soul Chip（自救次數）
 @export var soul_chips: int = 3
@@ -151,6 +168,10 @@ func _on_body_entered(body):
 		# Enemy-to-enemy collision never deals damage, only physics.
 		_handle_enemy_to_enemy_collision(body)
 
+	# 玩家單位碰到牆壁也累積氣量表
+	if body is StaticBody2D and is_player_unit:
+		_handle_wall_collision()
+
 ## 處理與敵人碰撞
 func _handle_enemy_collision(enemy):
 	if not enemy.has_method("take_damage"):
@@ -180,7 +201,8 @@ func _handle_enemy_collision(enemy):
 
 	# 累積技能量表（由 BattleController 處理）
 	if is_player_unit:
-		var skill_gain = speed_scale * 20.0  # 根據速度給予能量
+		var skill_gain = speed_scale * 0.1  # 根據速度給予能量（約2%，滿速碰撞給予0.1格能量）
+		print("[Unit] ", unit_name, " collision with enemy - speed_scale: ", "%.3f" % speed_scale, " | adding skill gauge: ", "%.3f" % skill_gain)
 		get_tree().call_group("battle_controller", "add_skill_gauge", skill_gain)
 
 	# 應用擊退效果（讓敵人被推動）
@@ -237,6 +259,14 @@ func _handle_enemy_to_enemy_collision(other_enemy):
 
 		print("[Enemy Collision] ", unit_name, " pushed ", other_enemy.unit_name,
 			  " with power ", "%.0f" % push_power, " (PASSIVE)")
+
+## 處理與牆壁碰撞
+func _handle_wall_collision():
+	# 玩家單位碰到牆壁時，根據速度累積少量氣量表
+	var speed_scale = velocity_magnitude / MAX_SPEED
+	var skill_gain = speed_scale * 0.02  # 牆壁碰撞給予極少能量（約0.4%）
+	get_tree().call_group("battle_controller", "add_skill_gauge", skill_gain)
+	print("[Wall Collision] ", unit_name, " hit wall, gained ", "%.1f" % skill_gain, " skill gauge")
 
 ## 檢查是否命中弱點（扇形區域判定）
 func _check_weakness(target, collision_point: Vector2) -> bool:

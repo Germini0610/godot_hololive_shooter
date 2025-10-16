@@ -55,6 +55,15 @@ func _ready():
 	player_team = Team.new()
 	add_child(player_team)
 
+	# 尋找 UI 控制器
+	await get_tree().process_frame
+	var ui_nodes = get_tree().get_nodes_in_group("battle_ui")
+	if ui_nodes.size() > 0:
+		ui_controller = ui_nodes[0]
+		print("[BattleController] UI Controller found: ", ui_controller.name)
+	else:
+		print("[BattleController] WARNING: UI Controller not found!")
+
 	# 連接信號
 	skill_gauge_changed.connect(_on_skill_gauge_changed)
 
@@ -245,9 +254,12 @@ func _trigger_skill():
 
 ## 增加技能量表
 func add_skill_gauge(amount: float):
+	var old_gauge = current_skill_gauge
 	current_skill_gauge += amount
 	current_skill_gauge = clamp(current_skill_gauge, 0.0, float(MAX_SKILL_GAUGE))
-	skill_gauge_changed.emit(floor(current_skill_gauge), MAX_SKILL_GAUGE)
+	var gauge_filled = int(floor(current_skill_gauge))
+	print("[BattleController] Skill Gauge: ", "%.3f" % old_gauge, " -> ", "%.3f" % current_skill_gauge, " (+", "%.3f" % amount, ") | Filled: ", gauge_filled, "/", MAX_SKILL_GAUGE)
+	skill_gauge_changed.emit(gauge_filled, MAX_SKILL_GAUGE)
 
 ## 結束玩家移動
 func _end_player_move():
@@ -429,8 +441,9 @@ func set_active_unit(unit: Unit):
 
 ## UI 回調
 func _on_skill_gauge_changed(current: int, max: int):
-	if ui_controller and ui_controller.has_method("update_skill_gauge"):
-		ui_controller.update_skill_gauge(current, max)
+	if ui_controller and ui_controller.has_method("update_skill_gauge_realtime"):
+		# 傳遞實際的浮點數能量值以支援即時進度顯示
+		ui_controller.update_skill_gauge_realtime(current_skill_gauge, max)
 
 ## 使用 Soul Chip
 func use_soul_chip(unit: Unit) -> bool:

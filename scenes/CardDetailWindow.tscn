@@ -1,0 +1,290 @@
+[gd_scene load_steps=8 format=3 uid="uid://dttttt1111111"]
+
+[ext_resource type="Script" path="res://scripts/CardDetailWindow.gd" id="1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.05, 0.05, 0.1, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.84, 0, 1)
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+shadow_size = 10
+shadow_color = Color(0, 0, 0, 0.5)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+bg_color = Color(0.15, 0.1, 0.2, 1)
+border_width_bottom = 2
+border_color = Color(1, 0.84, 0, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stats"]
+bg_color = Color(0.12, 0.12, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.6, 1, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skill"]
+bg_color = Color(0.12, 0.12, 0.18, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.4, 1, 0.6)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scroll"]
+bg_color = Color(0.2, 0.2, 0.25, 0.5)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_scrollbar"]
+bg_color = Color(1, 0.84, 0, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="CardDetailWindow" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Overlay" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -400.0
+offset_right = 450.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="HeaderPanel" type="Panel" parent="Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 80.0
+grow_horizontal = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="UnitName" type="Label" parent="Panel/HeaderPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_font_sizes/font_size = 56
+text = "Ina"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Panel"]
+layout_mode = 0
+offset_left = 840.0
+offset_top = 15.0
+offset_right = 885.0
+offset_bottom = 65.0
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "✕"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 15.0
+offset_top = 90.0
+offset_right = -15.0
+offset_bottom = -15.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_scroll")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="StatsPanel" type="PanelContainer" parent="Panel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stats")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/ScrollContainer/VBoxContainer/StatsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="StatsContainer" type="VBoxContainer" parent="Panel/ScrollContainer/VBoxContainer/StatsPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Panel/ScrollContainer/VBoxContainer/StatsPanel/MarginContainer/StatsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.6, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "━━ 三圍 ━━"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="Panel/ScrollContainer/VBoxContainer/StatsPanel/MarginContainer/StatsContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "攻擊：200
+移動：50
+翻牌範圍：200
+HP：20913"
+
+[node name="LeaderSkillPanel" type="PanelContainer" parent="Panel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/ScrollContainer/VBoxContainer/LeaderSkillPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="LeaderSkillContainer" type="VBoxContainer" parent="Panel/ScrollContainer/VBoxContainer/LeaderSkillPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/ScrollContainer/VBoxContainer/LeaderSkillPanel/MarginContainer/LeaderSkillContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.2, 1)
+theme_override_font_sizes/font_size = 32
+text = "━━ 隊長技能 ━━"
+horizontal_alignment = 1
+
+[node name="SkillLabel" type="Label" parent="Panel/ScrollContainer/VBoxContainer/LeaderSkillPanel/MarginContainer/LeaderSkillContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "古神的咒福
+所有队员三圍增加三倍,每回合損失現有血量10%!"
+autowrap_mode = 3
+
+[node name="CommandSkillPanel" type="PanelContainer" parent="Panel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/ScrollContainer/VBoxContainer/CommandSkillPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="CommandSkillContainer" type="VBoxContainer" parent="Panel/ScrollContainer/VBoxContainer/CommandSkillPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/ScrollContainer/VBoxContainer/CommandSkillPanel/MarginContainer/CommandSkillContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.2, 0.4, 1)
+theme_override_font_sizes/font_size = 32
+text = "━━ 大招 ━━"
+horizontal_alignment = 1
+
+[node name="SkillLabel" type="Label" parent="Panel/ScrollContainer/VBoxContainer/CommandSkillPanel/MarginContainer/CommandSkillContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "深淵之握
+發動後，自身進入獻祭狀態持續三回合,每回合自身損失15％血量,敵方移動時,召喚觸手綁定敵人並強制停止移動，造成4000%傷害"
+autowrap_mode = 3
+
+[node name="PassiveSkillPanel" type="PanelContainer" parent="Panel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/ScrollContainer/VBoxContainer/PassiveSkillPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="PassiveSkillContainer" type="VBoxContainer" parent="Panel/ScrollContainer/VBoxContainer/PassiveSkillPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/ScrollContainer/VBoxContainer/PassiveSkillPanel/MarginContainer/PassiveSkillContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 1, 0.4, 1)
+theme_override_font_sizes/font_size = 32
+text = "━━ 被動技能 ━━"
+horizontal_alignment = 1
+
+[node name="SkillLabel" type="Label" parent="Panel/ScrollContainer/VBoxContainer/PassiveSkillPanel/MarginContainer/PassiveSkillContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "癲狂
+射出方向改為反向，攻擊力增加1000%! 翻牌時，吸收附近敵人血量20%，自身恢復該血量。"
+autowrap_mode = 3
+
+[node name="AwakenSkillPanel" type="PanelContainer" parent="Panel/ScrollContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_skill")
+
+[node name="MarginContainer" type="MarginContainer" parent="Panel/ScrollContainer/VBoxContainer/AwakenSkillPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="AwakenSkillContainer" type="VBoxContainer" parent="Panel/ScrollContainer/VBoxContainer/AwakenSkillPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="Panel/ScrollContainer/VBoxContainer/AwakenSkillPanel/MarginContainer/AwakenSkillContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "━━ 覺醒技能 ━━"
+horizontal_alignment = 1
+
+[node name="SkillLabel" type="Label" parent="Panel/ScrollContainer/VBoxContainer/AwakenSkillPanel/MarginContainer/AwakenSkillContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "古神降臨
+自身三圍變為兩倍，每回合恢復現有血量15%"
+autowrap_mode = 3
